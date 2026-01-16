@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  # --- 1. 肢体：Go 高性能采集服务 ---
+  worker-go:
+    build: ./worker_service_go
+    container_name: worker-go
+    ports:
+      - "8080:8080"
+    environment:
+      - REDIS_ADDR=redis:6379
+      - PYTHON_SERVICE_URL=http://agent-brain:8081  # Python 服务地址（容器内）
+    networks:
+      - agent-net
+
+  # --- 2. 大脑：Python LangGraph Agent ---
+  agent-brain:
+    build: ./agent_control_py
+    container_name: agent-brain
+    ports:
+      - "8081:8081"
+    environment:
+      - GO_WORKER_URL=http://worker-go:8080  # 使用服务名进行容器间通信
+    depends_on:
+      - worker-go
+      - standalone
+    networks:
+      - agent-net
+
+  # --- 3. 记忆：Milvus 向量库 (最简 Standalone 模式) ---
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.5
+    container_name: milvus-etcd
+    command: etcd -advertise-client-urls http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
+    volumes:
+      - ./volumes/etcd:/etcd
+    networks:
+      - agent-net
+
+  minio:
+    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
+    container_name: milvus-minio
+    environment:
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+    command: server /docker_volume_nodes
+    volumes:
+      - ./volumes/minio:/docker_volume_nodes
+    networks:
+      - agent-net
+
+  standalone:
+    image: milvusdb/milvus:v2.3.0
+    container_name: milvus-standalone
+    command: ["milvus", "run", "standalone"]
+    environment:
+      - ETCD_ENDPOINTS=etcd:2379
+      - MINIO_ADDRESS=minio:9000
+    ports:
+      - "19530:19530"
+    depends_on:
+      - etcd
+      - minio
+    networks:
+      - agent-net
+
+  # --- 4. 缓存：Redis ---
+  redis:
+    image: redis:alpine
+    container_name: agent-redis
+    networks:
+      - agent-net
+
+networks:
+  agent-net:
+    driver: bridge
