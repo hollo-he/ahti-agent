@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ArrowLeft, Camera, RefreshCw, Flame, Heart, Leaf, ChevronRight, Clock, Target, BookOpen } from 'lucide-react';
 import { useNutrition } from '@/hooks';
 import { nutritionService } from '@/services';
-import MarkdownRenderer from './MarkdownRenderer';
+import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 
 interface Props {
   onBack: () => void;

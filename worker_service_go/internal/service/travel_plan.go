@@ -27,8 +27,8 @@ type TravelPlan struct {
 }
 
 type HTMLTemplateData struct {
-	Plan      *TravelPlan
-	RouteJSON htmlTpl.JS
+	Plan         *TravelPlan
+	RouteJSON    htmlTpl.JS
 	AMAP_API_KEY string
 }
 
@@ -149,10 +149,10 @@ func BuildTravelPlan(city, origin, dest, ticketKeyword string) (*TravelPlan, err
 
 func (p *TravelPlan) ExportToHTML(filename string) error {
 	routeJSON, _ := json.Marshal(p.RouteOptions)
-	amapAPIKey := getEnv("AMAP_API_KEY", "5e7f021f88e83fa2b782125f4bbbf193")
+	amapAPIKey := os.Getenv("AMAP_API_KEY")
 	data := HTMLTemplateData{
-		Plan:      p,
-		RouteJSON: htmlTpl.JS(routeJSON),
+		Plan:         p,
+		RouteJSON:    htmlTpl.JS(routeJSON),
 		AMAP_API_KEY: amapAPIKey,
 	}
 	funcMap := htmlTpl.FuncMap{

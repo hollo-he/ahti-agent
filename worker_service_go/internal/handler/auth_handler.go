@@ -361,13 +361,14 @@ func GetUserTravelPlansHandler(travelPlanRepo *db.TravelPlanRepository) gin.Hand
 func GetTravelPlanByIDHandler(travelPlanRepo *db.TravelPlanRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idStr := c.Param("id")
-		id, err := strconv.ParseUint(idStr, 10, 64)
+		idInt, err := strconv.Atoi(idStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "无效的ID",
 			})
 			return
 		}
+		id := uint(idInt)
 
 		userID, exists := c.Get("user_id")
 		if !exists {
@@ -377,7 +378,7 @@ func GetTravelPlanByIDHandler(travelPlanRepo *db.TravelPlanRepository) gin.Handl
 			return
 		}
 
-		plan, err := travelPlanRepo.GetTravelPlanByID(uint(id))
+		plan, err := travelPlanRepo.GetTravelPlanByID(id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -449,13 +450,14 @@ func GetAllTravelPlansHandler(travelPlanRepo *db.TravelPlanRepository) gin.Handl
 func DeleteTravelPlanHandler(travelPlanRepo *db.TravelPlanRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idStr := c.Param("id")
-		id, err := strconv.ParseUint(idStr, 10, 64)
+		idInt, err := strconv.Atoi(idStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "无效的ID",
 			})
 			return
 		}
+		id := uint(idInt)
 
 		userID, exists := c.Get("user_id")
 		if !exists {
@@ -465,7 +467,7 @@ func DeleteTravelPlanHandler(travelPlanRepo *db.TravelPlanRepository) gin.Handle
 			return
 		}
 
-		plan, err := travelPlanRepo.GetTravelPlanByID(uint(id))
+		plan, err := travelPlanRepo.GetTravelPlanByID(id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -481,7 +483,7 @@ func DeleteTravelPlanHandler(travelPlanRepo *db.TravelPlanRepository) gin.Handle
 			return
 		}
 
-		err = travelPlanRepo.MarkAsExpired(uint(id))
+		err = travelPlanRepo.MarkAsExpired(id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),

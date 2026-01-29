@@ -127,13 +127,14 @@ func GetNutritionAnalysesHandler(nutritionRepo *db.NutritionRepository) gin.Hand
 func GetNutritionAnalysisByIDHandler(nutritionRepo *db.NutritionRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idStr := c.Param("id")
-		id, err := strconv.ParseUint(idStr, 10, 64)
+		idInt, err := strconv.Atoi(idStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "无效的ID",
 			})
 			return
 		}
+		id := uint(idInt)
 
 		userID, exists := c.Get("user_id")
 		if !exists {
@@ -143,7 +144,7 @@ func GetNutritionAnalysisByIDHandler(nutritionRepo *db.NutritionRepository) gin.
 			return
 		}
 
-		analysis, err := nutritionRepo.GetNutritionAnalysisByID(uint(id))
+		analysis, err := nutritionRepo.GetNutritionAnalysisByID(id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -176,13 +177,14 @@ func GetNutritionAnalysisByIDHandler(nutritionRepo *db.NutritionRepository) gin.
 func DeleteNutritionAnalysisHandler(nutritionRepo *db.NutritionRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idStr := c.Param("id")
-		id, err := strconv.ParseUint(idStr, 10, 64)
+		idInt, err := strconv.Atoi(idStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "无效的ID",
 			})
 			return
 		}
+		id := uint(idInt)
 
 		userID, exists := c.Get("user_id")
 		if !exists {
@@ -192,7 +194,7 @@ func DeleteNutritionAnalysisHandler(nutritionRepo *db.NutritionRepository) gin.H
 			return
 		}
 
-		analysis, err := nutritionRepo.GetNutritionAnalysisByID(uint(id))
+		analysis, err := nutritionRepo.GetNutritionAnalysisByID(id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
@@ -208,7 +210,7 @@ func DeleteNutritionAnalysisHandler(nutritionRepo *db.NutritionRepository) gin.H
 			return
 		}
 
-		err = nutritionRepo.DeleteNutritionAnalysis(uint(id))
+		err = nutritionRepo.DeleteNutritionAnalysis(id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),

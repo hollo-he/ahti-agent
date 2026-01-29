@@ -14,7 +14,7 @@ import (
 
 // TravelPlanRequest 旅行计划请求结构
 type TravelPlanRequest struct {
-	UserID        int    `json:"user_id" binding:"required"`
+	UserID        uint   `json:"user_id" binding:"required"`
 	ThreadID      string `json:"thread_id" binding:"required"`
 	PlanTitle     string `json:"plan_title" binding:"required"`
 	Origin        string `json:"origin" binding:"required"`
@@ -47,7 +47,7 @@ func StoreTravelPlanHandler(travelPlanRepo *db.TravelPlanRepository) gin.Handler
 
 		// 创建旅行计划对象
 		plan := &db.TravelPlan{
-			UserID:        uint(req.UserID),
+			UserID:        req.UserID,
 			ThreadID:      req.ThreadID,
 			PlanTitle:     req.PlanTitle,
 			Origin:        req.Origin,
@@ -63,7 +63,7 @@ func StoreTravelPlanHandler(travelPlanRepo *db.TravelPlanRepository) gin.Handler
 
 		// 检查用户是否存在
 		userRepo := db.NewUserRepository(db.DB)
-		_, err := userRepo.GetUserByID(uint(req.UserID))
+		_, err := userRepo.GetUserByID(req.UserID)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "用户不存在",
@@ -166,13 +166,14 @@ func CleanupExpiredPlansHandler(travelPlanRepo *db.TravelPlanRepository) gin.Han
 func UpdateTravelPlanHandler(travelPlanRepo *db.TravelPlanRepository) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		idStr := c.Param("id")
-		id, err := strconv.ParseUint(idStr, 10, 64)
+		idInt, err := strconv.Atoi(idStr)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": "无效的ID",
 			})
 			return
 		}
+		id := uint(idInt)
 
 		var req struct {
 			PlanTitle     string `json:"plan_title"`
@@ -190,7 +191,7 @@ func UpdateTravelPlanHandler(travelPlanRepo *db.TravelPlanRepository) gin.Handle
 			return
 		}
 
-		plan, err := travelPlanRepo.GetTravelPlanByID(uint(id))
+		plan, err := travelPlanRepo.GetTravelPlanByID(id)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),

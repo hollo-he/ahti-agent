@@ -1,8 +1,14 @@
+ 
+ 
+ 
+ 
+ 
+ 
+import { API_BASE_URL } from '../config/config';
+
 // API服务配置和接口对接
 export const API_CONFIG = {
-  BASE_URL: process.env.NODE_ENV === 'production'
-    ? 'https://your-production-domain.com'
-    : '', // 使用相对路径，通过Vite代理
+  BASE_URL: API_BASE_URL,
   TIMEOUT: 30000,
   RETRY_ATTEMPTS: 3
 };
@@ -41,13 +47,20 @@ class ApiService {
     const url = `${this.baseURL}${endpoint}`;
     const token = localStorage.getItem('token');
 
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(token && { 'Authorization': `Bearer ${token}` }),
+      ...(options.headers as Record<string, string>),
+    };
+
+    // 如果 body 是 FormData，删除 Content-Type，让浏览器自动设置
+    if (options.body instanceof FormData) {
+      delete headers['Content-Type'];
+    }
+
     const config: RequestInit = {
       ...options,
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token && { 'Authorization': `Bearer ${token}` }),
-        ...options.headers,
-      },
+      headers,
     };
 
     try {
@@ -88,15 +101,22 @@ class ApiService {
   }
 
   // GET请求
-  async get<T>(endpoint: string): Promise<T> {
-    return this.request<T>(endpoint, { method: 'GET' });
+  async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {
+    let url = endpoint;
+    if (params) {
+      const queryString = new URLSearchParams(params).toString();
+      url += `?${queryString}`;
+    }
+    return this.request<T>(url, { method: 'GET' });
   }
 
   // POST请求
-  async post<T>(endpoint: string, data?: any): Promise<T> {
+  async post<T>(endpoint: string, data?: any, options: RequestInit = {}): Promise<T> {
+    const isFormData = data instanceof FormData;
     return this.request<T>(endpoint, {
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body: isFormData ? data : (data ? JSON.stringify(data) : undefined),
+      ...options,
     });
   }
 

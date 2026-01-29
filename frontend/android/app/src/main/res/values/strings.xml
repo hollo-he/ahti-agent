@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AhtiAgent</string>
+    <string name="title_activity_main">AhtiAgent</string>
+    <string name="package_name">com.ahti.agent</string>
+    <string name="custom_url_scheme">com.ahti.agent</string>
+</resources>

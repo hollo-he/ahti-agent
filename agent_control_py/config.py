@@ -1,3 +1,4 @@
+import os
 from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -43,8 +44,13 @@ class Settings(BaseSettings):
     DIMENSION: int = 512
 
     # --- 2. 统一配置 (V2 推荐做法) ---
+    # 获取项目根目录的 .env 文件路径
+    # config.py 在 agent_control_py/config.py，所以向上两级是项目根目录
+    _project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    _env_path = os.path.join(_project_root, ".env")
+
     model_config = SettingsConfigDict(
-        env_file=".env",  # 自动读取 .env
+        env_file=_env_path,  # 使用绝对路径
         env_file_encoding="utf-8",
         extra="ignore"  # 忽略环境变量中多余的变量
     )

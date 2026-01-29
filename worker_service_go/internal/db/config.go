@@ -32,11 +32,11 @@ type RedisConfig struct {
 func InitDB() (*gorm.DB, *redis.Client) {
 	// 初始化MySQL
 	dbConfig := DBConfig{
-		Host:     getEnv("DB_HOST", "192.168.1.149"),
-		Port:     getEnv("DB_PORT", "3307"),  // 更正端口为3307
+		Host:     getEnv("DB_HOST", "192.168.3.12"),
+		Port:     getEnv("DB_PORT", "3307"), // 更正端口为3307
 		User:     getEnv("DB_USER", "root"),
 		Password: getEnv("DB_PASSWORD", "123456"),
-		Database: getEnv("DB_NAME", "AHTI"),  // 更正数据库名为AHTI
+		Database: getEnv("DB_NAME", "AHTI"), // 更正数据库名为AHTI
 	}
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?charset=utf8mb4&parseTime=True&loc=Local",
@@ -54,17 +54,33 @@ func InitDB() (*gorm.DB, *redis.Client) {
 		log.Fatal("Failed to connect to database:", err)
 	}
 
-	// 由于表已存在，我们不需要自动迁移
-	// err = DB.AutoMigrate(&User{}, &TravelPlan{}, &UserSession{})
-	// if err != nil {
-	// 	log.Fatal("Failed to migrate database:", err)
-	// }
+	// 临时禁用外键检查，防止因类型修改导致的 Error 3780
+	DB.Exec("SET FOREIGN_KEY_CHECKS = 0")
+
+	// 显式删除冲突的外键约束，允许修改列类型
+	// 忽略错误（因为如果外键不存在会报错，但不影响后续）
+	DB.Exec("ALTER TABLE travel_plans DROP FOREIGN KEY travel_plans_ibfk_1")
+	DB.Exec("ALTER TABLE nutrition_analyses DROP FOREIGN KEY nutrition_analyses_ibfk_1")
+	DB.Exec("ALTER TABLE user_sessions DROP FOREIGN KEY user_sessions_ibfk_1")
+	// 注意：notes 表可能是新建的，或者外键名可能不同，但也尝试删除以防万一
+	DB.Exec("ALTER TABLE notes DROP FOREIGN KEY notes_ibfk_1")
+
+	// 统一迁移所有表，确保所有 ID 和外键类型一致更新为 uint
+	err = DB.AutoMigrate(&User{}, &TravelPlan{}, &UserSession{}, &NutritionAnalysis{}, &Note{}, &Todo{}) // Added Todo
+	if err != nil {
+		// 恢复外键检查
+		DB.Exec("SET FOREIGN_KEY_CHECKS = 1")
+		log.Fatal("Failed to migrate database:", err)
+	}
+
+	// 恢复外键检查
+	DB.Exec("SET FOREIGN_KEY_CHECKS = 1")
 
 	// 初始化Redis
 	redisConfig := RedisConfig{
 		Addr:     getEnv("REDIS_ADDR", "192.168.1.149:6379"),
 		Password: getEnv("REDIS_PASSWORD", ""), // no password set
-		DB:       0,                           // use default DB
+		DB:       0,                            // use default DB
 	}
 
 	RedisClient = redis.NewClient(&redis.Options{

@@ -9,8 +9,6 @@ import (
 	"strings"
 )
 
-var AMAP_API_KEY = getEnv("AMAP_API_KEY", "5e7f021f88e83fa2b782125f4bbbf193")
-
 const (
 	amapGeocodeURL = "https://restapi.amap.com/v3/geocode/geo"
 	amapDrivingURL = "https://restapi.amap.com/v3/direction/driving"
@@ -53,8 +51,13 @@ func GetRouteInfo(originAddr, destAddr string) (map[string]*TravelOption, error)
 
 // fetchDrivingDetail 获取自驾详细路线，并从 steps 中提取拼接 polyline
 func fetchDrivingDetail(origin, dest string) (*TravelOption, error) {
+	apiKey := getEnv("AMAP_API_KEY", "")
+	if apiKey == "" {
+		return nil, fmt.Errorf("missing AMAP_API_KEY")
+	}
+
 	params := url.Values{}
-	params.Set("key", AMAP_API_KEY)
+	params.Set("key", apiKey)
 	params.Set("origin", origin)
 	params.Set("destination", dest)
 	params.Set("extensions", "base") // base 模式在 step 中已有 polyline
@@ -120,8 +123,13 @@ func fetchDrivingDetail(origin, dest string) (*TravelOption, error) {
 
 // fetchTransitDetail 获取公交详情并拼接 Polyline
 func fetchTransitDetail(origin, dest, city string) (*TravelOption, error) {
+	apiKey := getEnv("AMAP_API_KEY", "")
+	if apiKey == "" {
+		return nil, fmt.Errorf("missing AMAP_API_KEY")
+	}
+
 	params := url.Values{}
-	params.Set("key", AMAP_API_KEY)
+	params.Set("key", apiKey)
 	params.Set("origin", origin)
 	params.Set("destination", dest)
 	params.Set("city", city)
@@ -195,13 +203,19 @@ func fetchTransitDetail(origin, dest, city string) (*TravelOption, error) {
 }
 
 func addressToCoords(address string) (string, string, error) {
-	u, _ := url.Parse(amapGeocodeURL)
-	q := u.Query()
-	q.Set("key", AMAP_API_KEY)
-	q.Set("address", address)
-	u.RawQuery = q.Encode()
+	apiKey := getEnv("AMAP_API_KEY", "")
+	if apiKey == "" {
+		return "", "", fmt.Errorf("missing AMAP_API_KEY")
+	}
 
-	resp, _ := http.Get(u.String())
+	params := url.Values{}
+	params.Set("key", apiKey)
+	params.Set("address", address)
+
+	resp, err := http.Get(amapGeocodeURL + "?" + params.Encode())
+	if err != nil {
+		return "", "", err
+	}
 	defer resp.Body.Close()
 
 	var res struct {

@@ -1,6 +1,4 @@
 // src/config.ts
-const API_BASE_URL = process.env.NODE_ENV === 'production' 
-  ? 'http://your-production-domain.com'  // 生产环境API地址
-  : 'http://localhost:8080';             // 开发环境API地址
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
 
 export { API_BASE_URL };

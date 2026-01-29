@@ -3,6 +3,7 @@ export * from './api';
 export * from './authService';
 export * from './travelService';
 export * from './nutritionService';
+export * from './noteService';
 
 // 错误处理工具
 export class ApiError extends Error {

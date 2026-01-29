@@ -105,7 +105,84 @@ func (p *ProxyHandler) HandleNutritionProxy(c *gin.Context) {
 	c.Data(resp.StatusCode, resp.Header.Get("Content-Type"), responseBody)
 }
 
-// HandleChatProxy 代理聊天请求到 Python 服务
+// HandlePolishProxy 代理润色请求到 Python 服务
+func (p *ProxyHandler) HandlePolishProxy(c *gin.Context) {
+	pythonURL := fmt.Sprintf("%s/api/v1/agent/polish", p.pythonServiceURL)
+	
+	// 读取原始请求体
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无法读取请求体"})
+		return
+	}
+
+	// 创建新请求
+	req, err := http.NewRequest("POST", pythonURL, bytes.NewReader(body))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建请求失败"})
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	
+	// 发送到 Python 服务
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "调用 AI 服务失败"})
+		return
+	}
+	defer resp.Body.Close()
+
+	// 读取 Python 服务的响应
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "读取 AI 响应失败"})
+		return
+	}
+
+	c.Data(resp.StatusCode, "application/json", responseBody)
+}
+
+// HandlePlanProxy 代理计划生成请求到 Python 服务
+func (p *ProxyHandler) HandlePlanProxy(c *gin.Context) {
+	pythonURL := fmt.Sprintf("%s/api/v1/agent/plan", p.pythonServiceURL)
+	
+	// 读取原始请求体
+	body, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "无法读取请求体"})
+		return
+	}
+
+	// 创建新请求
+	req, err := http.NewRequest("POST", pythonURL, bytes.NewReader(body))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "创建请求失败"})
+		return
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	
+	// 发送到 Python 服务
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "调用 AI 服务失败"})
+		return
+	}
+	defer resp.Body.Close()
+
+	// 读取 Python 服务的响应
+	responseBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "读取 AI 响应失败"})
+		return
+	}
+
+	c.Data(resp.StatusCode, "application/json", responseBody)
+}
+
 func (p *ProxyHandler) HandleChatProxy(c *gin.Context) {
 	// 验证用户身份（通过中间件）
 

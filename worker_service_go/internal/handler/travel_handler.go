@@ -38,7 +38,7 @@ func HandleTravelPlan(c *gin.Context) {
 		userID = userIDVal.(uint)
 		fmt.Printf("✅ 用户认证成功: user_id = %d\n", userID)
 	} else if userIDHeader := c.GetHeader("X-User-ID"); userIDHeader != "" {
-		if id, err := strconv.ParseUint(userIDHeader, 10, 32); err == nil {
+		if id, err := strconv.Atoi(userIDHeader); err == nil {
 			userID = uint(id)
 			fmt.Printf("✅ 从请求头获取 user_id = %d\n", userID)
 		}

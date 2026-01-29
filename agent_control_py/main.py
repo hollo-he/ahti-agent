@@ -10,17 +10,35 @@ from langgraph.types import Command
 # ⚠️ 必须在导入 travel_app 之前设置环境变量
 from config import settings
 
-os.environ["LANGCHAIN_TRACING_V2"] = "true"
-os.environ["LANGCHAIN_API_KEY"] = settings.LANGCHAIN_API_KEY
-os.environ["LANGCHAIN_PROJECT"] = settings.LANGCHAIN_PROJECT
+if settings.LANGCHAIN_API_KEY:
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    os.environ["LANGCHAIN_API_KEY"] = settings.LANGCHAIN_API_KEY
+    os.environ["LANGCHAIN_PROJECT"] = settings.LANGCHAIN_PROJECT
+else:
+    os.environ["LANGCHAIN_TRACING_V2"] = "false"
 
 # 现在再导入
 from core.asr import asr_manager
 from core.rag_engine import RAGEngine
 from graphs.travel.workflow import travel_app
 from graphs.nutrition.workflow import nutrition_app
+from graphs.todo import create_todo_graph
 
 app = FastAPI(title="Agent Control Center (Python Brain)")
+
+# --- 全局异常捕获中间件 ---
+from fastapi import Request, Response
+import traceback
+
+@app.middleware("http")
+async def catch_exceptions_middleware(request: Request, call_next):
+    try:
+        return await call_next(request)
+    except Exception as e:
+        print("🔥 [CRITICAL ERROR] Uncaught exception in middleware:")
+        traceback.print_exc()
+        return Response("Internal Server Error", status_code=500)
+
 rag_engine = RAGEngine()
 
 
@@ -93,7 +111,51 @@ async def analyze_nutrition(req: NutritionRequest, bg_tasks: BackgroundTasks, au
     }
 
 
-# --- 核心：语音/文字对话入口 ---
+from services.polish_service import polish_service
+
+# --- 润色请求结构 ---
+class PolishRequest(BaseModel):
+    text: str
+    length: Optional[str] = "medium" # short, medium, long
+    tone: Optional[str] = "standard"  # standard, humorous, emotional, formal, casual
+    style: Optional[str] = "descriptive" # descriptive, poetic, realistic, dreamy, custom
+    custom_prompt: Optional[str] = None
+    image_urls: Optional[list[str]] = None
+
+class PlanRequest(BaseModel):
+    user_input: str
+
+# --- 润色接口 ---
+@app.post("/api/v1/agent/polish")
+async def polish_text(req: PolishRequest):
+    if not req.text and (not req.image_urls or len(req.image_urls) == 0):
+        return {"polished_text": ""}
+
+    print(f"✨ 正在润色文本: {req.text[:20]}... (Len: {req.length}, Tone: {req.tone}, Style: {req.style}, Images: {len(req.image_urls) if req.image_urls else 0})")
+    
+    try:
+        polished_text = await polish_service.polish_text(req.text, req.length, req.tone, req.style, req.custom_prompt, req.image_urls)
+        return {"polished_text": polished_text}
+    except Exception as e:
+        print(f"❌ 润色失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# --- 计划生成接口 ---
+@app.post("/api/v1/agent/plan")
+async def generate_plan(req: PlanRequest):
+    print(f"📅 收到计划生成请求: {req.user_input[:20]}...")
+    try:
+        graph = create_todo_graph()
+        result = await graph.ainvoke({"user_input": req.user_input})
+        
+        if result.get("error"):
+            raise HTTPException(status_code=500, detail=result["error"])
+            
+        return result["plan"]
+    except Exception as e:
+        print(f"❌ 生成计划失败: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/v1/agent/chat")
 async def handle_agent_chat(
         file: Optional[UploadFile] = File(None),
